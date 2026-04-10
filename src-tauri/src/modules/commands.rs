@@ -1,5 +1,7 @@
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
+use std::sync::Arc;
 use crate::modules::audio::{emit_state, AppState};
+use crate::modules::audio_engine::AudioEngine;
 
 #[tauri::command]
 pub fn test_wake_word(app: AppHandle) {

@@ -1,83 +1,77 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
 export default function Home() {
-  const [status, setStatus] = useState<string>("Aguardando...");
-  const [lastResult, setLastResult] = useState<string>("");
+  const [status, setStatus] = useState("Aguardando 'Mila'...");
+  const [lastTranscript, setLastTranscript] = useState("");
+  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    let unlistenWakeWord: () => void;
-    let unlistenSTT: () => void;
+    const unlistenWake = listen("WAKE_WORD_DETECTED", () => {
+      setStatus("Ouvindo...");
+      setIsListening(true);
+    });
 
-    async function setupListeners() {
-      // Listen for the global events emitted by the Rust backend
-      const unlistenWW = await listen("WAKE_WORD_DETECTED", () => {
-        setStatus("Palavra de ativação detectada!");
-        // Reset status after 3 seconds
-        setTimeout(() => setStatus("Aguardando..."), 3000);
-      });
-      unlistenWakeWord = unlistenWW;
-
-      const unlistenResult = await listen<string>("STT_RESULT", (event) => {
-        setLastResult(event.payload);
-      });
-      unlistenSTT = unlistenResult;
-    }
-
-    setupListeners();
+    const unlistenSTT = listen("STT_RESULT", (event: { payload: string }) => {
+      setStatus("Aguardando 'Mila'...");
+      setIsListening(false);
+      setLastTranscript(event.payload);
+    });
 
     return () => {
-      if (unlistenWakeWord) unlistenWakeWord();
-      if (unlistenSTT) unlistenSTT();
+      unlistenWake.then(f => f());
+      unlistenSTT.then(f => f());
     };
   }, []);
 
-  const triggerWakeWord = () => invoke("test_wake_word");
-  const triggerSTT = () => invoke("test_stt", { result: "Exemplo de resultado STT" });
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-zinc-50 dark:bg-zinc-950">
-      <div className="z-10 max-w-5xl w-full flex flex-col gap-8 p-12 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl">
-        <div className="space-y-2">
-          <h1 className="text-5xl font-black tracking-tighter text-zinc-900 dark:text-zinc-50">
-            Mila <span className="text-blue-600">Core</span>
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-            Tauri v2 + Next.js Base Structure
-          </p>
-        </div>
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-[#0a0a0a] text-white">
+      <div className="z-10 w-full max-w-md flex flex-col items-center space-y-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
+          Mila AI
+        </h1>
 
-        <div className="grid gap-6 py-4">
-          <div className="p-6 rounded-2xl bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
-            <p className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Status do Sistema</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{status}</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
-            <p className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Último Resultado STT</p>
-            <p className="text-2xl font-medium text-zinc-800 dark:text-zinc-200 italic">
-              {lastResult ? `"${lastResult}"` : "Nenhum resultado ainda"}
-            </p>
+        <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 shadow-[0_0_20px_rgba(0,0,0,0.5)] ${
+          isListening ? 'bg-pink-500 shadow-[0_0_60px_rgba(236,72,153,0.5)] scale-110' : 'bg-zinc-800'
+        }`}>
+          <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center overflow-hidden border border-zinc-700/50">
+             <div className={`w-full h-1 bg-pink-500 transition-all ${isListening ? 'animate-pulse' : 'opacity-20'}`} />
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-4">
+
+        <div className="text-center space-y-2">
+          <p className="text-zinc-400 font-medium tracking-wide uppercase text-xs">Status do Sistema</p>
+          <p className="text-2xl font-bold tracking-tight">{status}</p>
+        </div>
+
+        {lastTranscript && (
+          <div className="w-full p-6 bg-zinc-900/40 border border-zinc-800/50 rounded-3xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-3 border-b border-zinc-800/50 pb-2">Transcrição Recente</p>
+            <p className="text-zinc-200 text-lg leading-relaxed">"{lastTranscript}"</p>
+          </div>
+        )}
+
+        <div className="flex space-x-4 pt-8">
           <button 
-            onClick={triggerWakeWord}
-            className="px-8 py-4 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 font-bold rounded-2xl transition hover:scale-105 active:scale-95 duration-200 shadow-xl"
+            onClick={() => invoke("test_wake_word")}
+            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-zinc-400 transition-all active:scale-95"
           >
             Simular Wake Word
           </button>
           <button 
-            onClick={triggerSTT}
-            className="px-8 py-4 border-2 border-zinc-900 dark:border-zinc-50 text-zinc-900 dark:text-zinc-50 font-bold rounded-2xl transition hover:bg-zinc-900/5 dark:hover:bg-zinc-50/5 hover:scale-105 active:scale-95 duration-200"
+            onClick={() => invoke("test_stt", { result: "Olá! Como posso ajudar você hoje?" })}
+            className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-xl text-xs font-semibold text-zinc-400 transition-all active:scale-95"
           >
-            Simular STT
+            Simular Resposta
           </button>
         </div>
+
+        <p className="fixed bottom-8 text-[10px] text-zinc-600 tracking-widest uppercase">
+          Mila • Local & Open Source
+        </p>
       </div>
     </main>
   );

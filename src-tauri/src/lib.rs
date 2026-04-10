@@ -8,6 +8,13 @@ pub fn run() {
       // Load environment variables
       dotenvy::dotenv().ok();
 
+      // Initialize and start Audio Engine
+      let app_handle = app.handle().clone();
+      let audio_engine = crate::modules::audio_engine::AudioEngine::new(app_handle);
+      if let Err(e) = audio_engine.start() {
+        eprintln!("Failed to start Audio Engine: {:?}", e);
+      }
+
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
